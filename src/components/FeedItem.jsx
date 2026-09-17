@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { MEASUREMENTS, unitFor, labelFor } from '../lib/measurements'
 import { activityFor } from '../lib/activities'
 import { fmtDay } from '../lib/day'
 import Icon from '../components/Icon'
 import ReactionBar from './ReactionBar'
 import CommentThread from './CommentThread'
+import PhotoViewer from './PhotoViewer'
 
 // One card in the crew feed. The shell — author, date, photo, note, reactions,
 // replies — is identical for both kinds of post; only the body differs.
@@ -11,6 +13,7 @@ export default function FeedItem({ post, me, usersById, onPatch }) {
   // The author can be null if a user row was deleted while their posts remain.
   const u = post.user || {}
   const color = u.color || 'var(--accent)'
+  const [viewing, setViewing] = useState(false)
 
   return (
     <article className="feed-card" style={{ '--user': color }}>
@@ -21,13 +24,30 @@ export default function FeedItem({ post, me, usersById, onPatch }) {
       </header>
 
       <div className="feed-body">
-        {post.photoUrl && <img className="thumb" src={post.photoUrl} alt="" loading="lazy" />}
+        {post.photoUrl && (
+          <button
+            type="button"
+            className="thumb-btn"
+            aria-label={`View ${u.name || 'this'} photo full size`}
+            onClick={() => setViewing(true)}
+          >
+            <img className="thumb" src={post.photoUrl} alt="" loading="lazy" />
+          </button>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           {post.kind === 'checkin' ? <CheckinBody post={post} /> : <EntryBody post={post} />}
         </div>
       </div>
 
       {post.note && <div className="feed-note">{post.note}</div>}
+
+      {viewing && post.photoUrl && (
+        <PhotoViewer
+          src={post.photoUrl}
+          alt={`${u.name || 'Crew'} — ${post.date}`}
+          onClose={() => setViewing(false)}
+        />
+      )}
 
       <div className="social-bar">
         <ReactionBar post={post} me={me} onPatch={onPatch} />

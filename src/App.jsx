@@ -4,6 +4,7 @@ import NamePinPicker from './screens/NamePinPicker'
 import LogEntry from './screens/LogEntry'
 import Tape from './screens/Tape'
 import CrewFeed from './screens/CrewFeed'
+import CheckIn from './screens/CheckIn'
 
 export default function App() {
   const { user } = useAuth()
@@ -15,6 +16,7 @@ export default function App() {
     <div className="app">
       <Routes>
         <Route path="/" element={<CrewFeed />} />
+        <Route path="/today" element={<CheckIn />} />
         <Route path="/log" element={<LogEntry />} />
         <Route path="/tape" element={<Tape />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -31,6 +33,10 @@ function BottomNav() {
       <NavLink to="/" end>
         <span className="ico">📣</span>
         Crew
+      </NavLink>
+      <NavLink to="/today">
+        <span className="ico">🔥</span>
+        Today
       </NavLink>
       <NavLink to="/log">
         <span className="ico">✍️</span>

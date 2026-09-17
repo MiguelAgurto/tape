@@ -11,13 +11,7 @@ import {
   labelFor,
 } from '../lib/measurements'
 import Icon from '../components/Icon'
-
-function todayISO() {
-  // Local date (not UTC) so "today" matches the user's clock.
-  const d = new Date()
-  const off = d.getTimezoneOffset()
-  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10)
-}
+import { todayISO } from '../lib/day'
 
 export default function LogEntry() {
   const { user, logout } = useAuth()

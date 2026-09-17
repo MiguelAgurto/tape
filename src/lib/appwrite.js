@@ -1,8 +1,8 @@
 // Appwrite client wiring.
 //
-// The backend is pre-built and used as-is: two tables (users, entries) and one
-// storage bucket (photos), all open to the "Any" role. No Appwrite Auth is
-// involved — see AuthContext for the PIN-based "who am I" flow.
+// The backend is used as-is: five tables (users, entries, checkins, reactions,
+// comments) and one storage bucket (photos), all open to the "Any" role. No
+// Appwrite Auth is involved — see AuthContext for the PIN-based "who am I" flow.
 
 import { Client, TablesDB, Storage } from 'appwrite'
 
@@ -16,6 +16,9 @@ export const PHOTOS_BUCKET_ID = env.VITE_APPWRITE_PHOTOS_BUCKET_ID
 // Table IDs are stable strings in the existing backend.
 export const USERS_TABLE = 'users'
 export const ENTRIES_TABLE = 'entries'
+export const CHECKINS_TABLE = 'checkins'
+export const REACTIONS_TABLE = 'reactions'
+export const COMMENTS_TABLE = 'comments'
 
 const missing = Object.entries({
   VITE_APPWRITE_ENDPOINT: ENDPOINT,

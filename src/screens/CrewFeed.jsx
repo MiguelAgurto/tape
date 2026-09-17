@@ -1,27 +1,81 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listFeed } from '../lib/db'
-import { MEASUREMENTS, unitFor, labelFor } from '../lib/measurements'
-import Icon from '../components/Icon'
+import { useAuth } from '../context/AuthContext'
+import { useCrewRealtime } from '../lib/realtime'
+import FeedItem from '../components/FeedItem'
+import TodayStrip from '../components/TodayStrip'
 
 export default function CrewFeed() {
-  const [entries, setEntries] = useState(null)
+  const { user } = useAuth()
+  const [feed, setFeed] = useState(null)
   const [failed, setFailed] = useState(false)
+  const [hasNew, setHasNew] = useState(false)
 
-  useEffect(() => {
-    listFeed()
-      .then(setEntries)
+  const load = useCallback(() => {
+    return listFeed()
+      .then((res) => {
+        setFeed(res)
+        setFailed(false)
+        setHasNew(false)
+      })
       .catch((err) => {
         console.error('Could not load the feed:', err)
         setFailed(true)
-        setEntries([])
+        setFeed({ posts: [], users: [] })
       })
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Patch one post in place. Accepts either a partial object or a function of
+  // the current post, so optimistic updates can't clobber a racing one.
+  const patchPost = useCallback((targetKey, patch) => {
+    setFeed((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        posts: prev.posts.map((p) =>
+          p.targetKey === targetKey
+            ? { ...p, ...(typeof patch === 'function' ? patch(p) : patch) }
+            : p,
+        ),
+      }
+    })
+  }, [])
+
+  useCrewRealtime(
+    useCallback(({ table, action, row }) => {
+      // Reactions and comments are self-contained: the payload carries its own
+      // targetKey, so it can be applied straight into the post it belongs to.
+      // Keying by $id keeps it idempotent — your own writes echo back here too.
+      if (table === 'reactions' || table === 'comments') {
+        const field = table === 'reactions' ? 'reactions' : 'comments'
+        patchPost(row.targetKey, (p) => {
+          const without = p[field].filter((x) => x.$id !== row.$id)
+          return { [field]: action === 'delete' ? without : [...without, row] }
+        })
+        return
+      }
+
+      // A new post is a different matter: the payload arrives with no author
+      // stitched in and may belong outside the current window. Offer a refresh
+      // rather than guessing where it goes.
+      setHasNew(true)
+    }, [patchPost]),
+  )
+
+  const usersById = useMemo(
+    () => new Map((feed?.users ?? []).map((u) => [u.$id, u])),
+    [feed?.users],
+  )
 
   return (
     <div className="page">
       <h1 className="page-title">Crew</h1>
 
-      {entries === null ? (
+      {feed === null ? (
         <>
           <div className="skeleton sk-card" />
           <div className="skeleton sk-card" />
@@ -33,72 +87,37 @@ export default function CrewFeed() {
           <div className="empty-title">Can't reach the backend</div>
           <p>Check your connection and give it another go.</p>
         </div>
-      ) : entries.length === 0 ? (
-        <div className="empty">
-          <span className="empty-emoji">🏁</span>
-          <div className="empty-title">Nothing logged yet</div>
-          <p>Be the first on the board — head to Log.</p>
-        </div>
       ) : (
-        entries.map((e) => <FeedItem key={e.$id} entry={e} />)
+        <>
+          {feed.users.length > 0 && (
+            <TodayStrip posts={feed.posts} users={feed.users} me={user} />
+          )}
+
+          {hasNew && (
+            <button type="button" className="new-pill" onClick={load}>
+              New activity — tap to refresh
+            </button>
+          )}
+
+          {feed.posts.length === 0 ? (
+            <div className="empty">
+              <span className="empty-emoji">🏁</span>
+              <div className="empty-title">Nothing logged yet</div>
+              <p>Be the first on the board — head to Today.</p>
+            </div>
+          ) : (
+            feed.posts.map((p) => (
+              <FeedItem
+                key={p.targetKey}
+                post={p}
+                me={user}
+                usersById={usersById}
+                onPatch={(patch) => patchPost(p.targetKey, patch)}
+              />
+            ))
+          )}
+        </>
       )}
     </div>
   )
-}
-
-function FeedItem({ entry }) {
-  // listFeed attaches the author; it can be null if a user row was deleted
-  // while their entries remain.
-  const u = entry.user || {}
-  const color = u.color || 'var(--accent)'
-  const filled = MEASUREMENTS.filter((m) => entry[m.key] != null)
-  // The first recorded measurement becomes the card's headline figure.
-  const [hero, ...rest] = filled
-
-  return (
-    <article className="feed-card" style={{ '--user': color }}>
-      <header className="feed-head">
-        <span className="avatar">{(u.name || '?').charAt(0).toUpperCase()}</span>
-        <span className="feed-name">{u.name || 'Someone'}</span>
-        <time className="feed-date">{fmtDate(entry.date)}</time>
-      </header>
-
-      <div className="feed-body">
-        {entry.photoUrl && <img className="thumb" src={entry.photoUrl} alt="" loading="lazy" />}
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {hero ? (
-            <>
-              <div className="stat stat-lg hero-value">
-                {entry[hero.key]}
-                <span className="stat-unit">{unitFor(hero.key)}</span>
-              </div>
-              <div className="hero-label">{labelFor(hero.key)}</div>
-
-              {rest.length > 0 && (
-                <div className="stat-pills">
-                  {rest.map((m) => (
-                    <span className="stat-pill" key={m.key}>
-                      <Icon name={m.key} size={17} className="measure-icon" />
-                      <span className="pv">{entry[m.key]}</span>
-                      {unitFor(m.key)}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            !entry.note && <div className="muted" style={{ fontSize: 14 }}>Photo only</div>
-          )}
-        </div>
-      </div>
-
-      {entry.note && <div className="feed-note">{entry.note}</div>}
-    </article>
-  )
-}
-
-function fmtDate(iso) {
-  const d = new Date(iso + 'T00:00:00')
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }

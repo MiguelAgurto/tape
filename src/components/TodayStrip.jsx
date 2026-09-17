@@ -24,7 +24,8 @@ export default function TodayStrip({ posts, users, me }) {
         {users.map((u) => {
           const post = byUser.get(u.$id)
           return (
-            <div
+            <Link
+              to={`/crew/${u.$id}`}
               className={`today-person${post ? ' done' : ''}`}
               key={u.$id}
               style={{ '--user': u.color }}
@@ -36,7 +37,7 @@ export default function TodayStrip({ posts, users, me }) {
                 </span>
               )}
               <span className="today-name">{u.name}</span>
-            </div>
+            </Link>
           )
         })}
       </div>

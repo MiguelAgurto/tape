@@ -290,6 +290,51 @@ export async function listFeed(limit = FEED_PER_KIND * 2) {
   }
 }
 
+// Everything one person's profile needs, in one call.
+//
+// Both queries ride the idx_user_date indexes, so this stays cheap as the
+// history grows. Social rows are only fetched for the handful of posts the
+// profile actually renders as cards — the photo grid and the consistency strip
+// need no reactions at all.
+export async function listProfile(userId, recentLimit = 6) {
+  const [entries, checkins, users] = await Promise.all([
+    listAll(ENTRIES_TABLE, [
+      Query.equal('userId', userId),
+      Query.orderDesc('date'),
+      Query.orderDesc('$createdAt'),
+    ]),
+    listAll(CHECKINS_TABLE, [
+      Query.equal('userId', userId),
+      Query.orderDesc('date'),
+      Query.orderDesc('$createdAt'),
+    ]),
+    listUsers(),
+  ])
+
+  const user = users.find((u) => u.$id === userId) ?? null
+  const posts = [
+    ...entries.map((r) => normalizeEntry(r, user)),
+    ...checkins.map((r) => normalizeCheckin(r, user)),
+  ].sort(newestFirst)
+
+  const recent = posts.slice(0, recentLimit)
+  const { reactionsByKey, commentsByKey } = await loadSocial(recent.map((p) => p.targetKey))
+
+  return {
+    user,
+    users,
+    posts,
+    entries,
+    checkins,
+    photos: posts.filter((p) => p.photoUrl),
+    recent: recent.map((p) => ({
+      ...p,
+      reactions: reactionsByKey.get(p.targetKey) ?? [],
+      comments: commentsByKey.get(p.targetKey) ?? [],
+    })),
+  }
+}
+
 // --- reactions -------------------------------------------------------------
 
 // One row per (targetKey, userId, emoji), enforced by the uniq_reaction index.

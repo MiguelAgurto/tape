@@ -5,6 +5,7 @@ import LogEntry from './screens/LogEntry'
 import Tape from './screens/Tape'
 import CrewFeed from './screens/CrewFeed'
 import CheckIn from './screens/CheckIn'
+import Profile from './screens/Profile'
 
 export default function App() {
   const { user } = useAuth()
@@ -19,6 +20,8 @@ export default function App() {
         <Route path="/today" element={<CheckIn />} />
         <Route path="/log" element={<LogEntry />} />
         <Route path="/tape" element={<Tape />} />
+        {/* The app's only parameterised route — reached by tapping any avatar. */}
+        <Route path="/crew/:userId" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />

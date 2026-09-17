@@ -11,6 +11,14 @@ export function todayISO() {
   return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10)
 }
 
+// N days back from today, as the same YYYY-MM-DD string the rows store.
+export function daysAgoISO(n) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  const off = d.getTimezoneOffset()
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10)
+}
+
 export function isToday(date) {
   return date === todayISO()
 }

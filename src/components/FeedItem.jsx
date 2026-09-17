@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { MEASUREMENTS, unitFor, labelFor } from '../lib/measurements'
 import { activityFor } from '../lib/activities'
 import { fmtDay } from '../lib/day'
@@ -40,8 +41,10 @@ export default function FeedItem({ post, me, usersById, onPatch, onDelete }) {
   return (
     <article className="feed-card" style={{ '--user': color }}>
       <header className="feed-head">
-        <span className="avatar">{(u.name || '?').charAt(0).toUpperCase()}</span>
-        <span className="feed-name">{u.name || 'Someone'}</span>
+        <Link to={`/crew/${post.userId}`} className="author-link">
+          <span className="avatar">{(u.name || '?').charAt(0).toUpperCase()}</span>
+          <span className="feed-name">{u.name || 'Someone'}</span>
+        </Link>
         <time className="feed-date">{fmtDay(post.date)}</time>
         {mine && !confirming && (
           <button

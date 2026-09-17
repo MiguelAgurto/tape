@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { addComment, deleteComment } from '../lib/db'
 
 // Collapsed to a count until tapped. At daily cadence the feed is mostly
@@ -50,9 +51,13 @@ export default function CommentThread({ post, me, usersById, onPatch }) {
         const author = usersById.get(c.userId)
         return (
           <div className="comment" key={c.$id} style={{ '--user': author?.color || 'var(--accent)' }}>
-            <span className="avatar">{(author?.name || '?').charAt(0).toUpperCase()}</span>
+            <Link to={`/crew/${c.userId}`} className="author-link">
+              <span className="avatar">{(author?.name || '?').charAt(0).toUpperCase()}</span>
+            </Link>
             <div className="comment-body">
-              <span className="comment-name">{author?.name || 'Someone'}</span>
+              <Link to={`/crew/${c.userId}`} className="comment-name">
+                {author?.name || 'Someone'}
+              </Link>
               <span className="comment-text">{c.body}</span>
             </div>
             {/* Ownership is a UI convention here, not a guarantee — the table

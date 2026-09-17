@@ -122,10 +122,8 @@ already on" and reconciles.
 ## Photo handling
 
 Any image the phone offers is accepted (JPEG/PNG/HEIC/HEIF). Before upload the
-app resizes the longest edge to ~1600px and re-encodes to JPEG ~60% on a canvas,
-turning a 4–5MB photo into ~300–600KB. That edge is sized for the feed's
-fullscreen viewer, which zooms to 5x — it's the ceiling on how much detail
-anyone can ever recover from a progress photo. If decoding fails (e.g. HEIC in a
+app resizes the longest edge to ~900px and re-encodes to JPEG ~60% on a canvas,
+turning a 4–5MB photo into ~100–300KB. If decoding fails (e.g. HEIC in a
 non-Safari browser), it uploads the original untouched — an upload is never
 blocked. The resulting file URL is saved to the entry's `photoUrl`.
 

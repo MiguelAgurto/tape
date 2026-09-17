@@ -611,9 +611,7 @@ button.chip .plus { color: var(--muted); font-weight: 600; }
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  /* All gestures are handled in JS — let none of them reach the browser. */
-  touch-action: none;
+  padding: 16px;
   animation: fade 0.16s ease;
 }
 
@@ -626,39 +624,27 @@ button.chip .plus { color: var(--muted); font-weight: 600; }
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  transform-origin: center center;
-  user-select: none;
-  -webkit-user-drag: none;
-  will-change: transform;
+  border-radius: var(--r-sm);
 }
 
+/* The way out. Deliberately a solid target rather than a bare glyph — it sits
+ * over an unpredictable photo, so it carries its own background. */
 .photo-close {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 12px);
-  right: 12px;
+  top: calc(env(safe-area-inset-top) + 14px);
+  right: 14px;
   z-index: 1;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: var(--r-full);
   background: var(--surface-2);
   border: 1px solid var(--line);
-  color: var(--text-2);
-  font-size: 22px;
+  color: var(--text);
+  font-size: 24px;
   line-height: 1;
 }
-.photo-close:hover { background: var(--surface-3); color: var(--text); }
-
-.photo-hint {
-  position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 20px);
-  left: 0; right: 0;
-  text-align: center;
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-  pointer-events: none;
-}
+.photo-close:hover { background: var(--surface-3); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

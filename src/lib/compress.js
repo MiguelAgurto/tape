@@ -4,14 +4,9 @@
 // re-encode as JPEG. If ANYTHING fails (e.g. a browser that can't decode HEIC),
 // fall back to the untouched original — we never block or reject an upload.
 //
-// Target: a 4-5MB phone photo → ~300-600KB.
-//
-// maxEdge is sized for the feed's fullscreen photo viewer, which zooms to 5x:
-// below ~1600px you run out of real pixels and start magnifying mush. It is the
-// ceiling on how much detail anyone can ever get back out of a progress photo,
-// so it is deliberately generous rather than tuned for bandwidth.
+// Target: a 4-5MB phone photo → ~100-300KB.
 
-const DEFAULTS = { maxEdge: 1600, quality: 0.6 }
+const DEFAULTS = { maxEdge: 900, quality: 0.6 }
 
 export async function compressImage(file, opts = {}) {
   const { maxEdge, quality } = { ...DEFAULTS, ...opts }

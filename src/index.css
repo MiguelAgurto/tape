@@ -458,38 +458,74 @@ button.chip .plus { color: var(--muted); font-weight: 600; }
 }
 .shake { animation: shake 0.32s ease; }
 
-/* ── Today strip ─────────────────────────────────────────────────────────── */
+/* ── Crew row (today strip) ──────────────────────────────────────────────── */
 
-/* Who has shown up. Present is full colour, absent is dimmed to an outline —
- * the gap is meant to be the thing your eye lands on. */
-.today-strip { padding: 16px 18px 14px; }
-.today-strip .row { gap: 18px; }
+/* Big circular avatars, Instagram-style: this row is both "who is in today"
+ * and the main way into someone's profile, so the tap target is sized for a
+ * thumb rather than for tidiness. */
+.today-strip { padding: 18px 18px 14px; }
+
+.crew-row {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  /* Room for the ring and badge, which sit outside the avatar's box. */
+  padding: 4px 2px 2px;
+  scrollbar-width: none;
+}
+.crew-row::-webkit-scrollbar { display: none; }
 
 .today-person {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  opacity: 0.38;
+  gap: 9px;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: inherit;
 }
-.today-person.done { opacity: 1; }
+
+.today-person .avatar {
+  width: 62px;
+  height: 62px;
+  font-size: 23px;
+  /* The ring is drawn outside the circle, so nothing has to resize with it. */
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--line);
+  transition: box-shadow 0.15s, opacity 0.15s;
+}
+
+/* Trained today: their own colour, lit. Not yet: hollow and quiet. */
+.today-person.done .avatar {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--user);
+}
 .today-person:not(.done) .avatar {
-  background: transparent;
+  background: var(--surface-2);
   color: var(--muted);
-  border: 1px solid var(--line);
+  opacity: 0.75;
 }
-.today-name { font-size: 12px; color: var(--text-2); }
+.today-person:active .avatar { opacity: 0.8; }
+
+.today-name {
+  font-size: 13px;
+  color: var(--text-2);
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.today-person:not(.done) .today-name { color: var(--muted); }
 
 .today-badge {
   position: absolute;
-  top: -4px;
-  right: -6px;
-  font-size: 12px;
+  top: 40px;
+  right: -2px;
+  font-size: 15px;
   line-height: 1;
   background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r-full);
-  padding: 2px;
+  padding: 3px;
 }
 
 .today-line { font-size: 13px; margin: 14px 0 0; }
@@ -776,6 +812,126 @@ a.comment-name:hover { color: var(--user); }
   /* Functional, not decorative — keeps the date legible over any photo. */
   background: linear-gradient(to top, rgba(6, 7, 9, 0.8), transparent);
 }
+
+/* ── Comparing photos ────────────────────────────────────────────────────── */
+
+.profile-avatar {
+  width: 84px;
+  height: 84px;
+  font-size: 32px;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--user);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+button.chip.section-action { padding: 6px 12px; font-size: 13px; }
+
+.photo-cell.selecting img { opacity: 0.55; }
+.photo-cell.picked img { opacity: 1; }
+.photo-cell.picked {
+  outline: 2px solid var(--user);
+  outline-offset: -2px;
+}
+
+/* Numbered so the order of the comparison is never a surprise. */
+.pick-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--text);
+  background: rgba(6, 7, 9, 0.5);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+}
+.photo-cell.picked .pick-badge {
+  background: var(--user);
+  border-color: var(--user);
+}
+
+.compare-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.compare-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(6, 7, 9, 0.97);
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 12px) 10px
+          calc(env(safe-area-inset-bottom) + 14px);
+  animation: fade 0.16s ease;
+}
+
+.compare-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 44px;
+  margin-bottom: 10px;
+}
+.compare-gap { font-size: 14px; font-weight: 600; color: var(--text); }
+.compare-close { position: absolute; top: 0; right: 0; }
+
+.compare-panes {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  min-height: 0;
+}
+.compare-pane {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.compare-pane img {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+}
+.compare-pane figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.compare-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.compare-date { font-size: 13px; color: var(--text-2); }
+
+.compare-deltas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  padding-top: 14px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.compare-delta { display: flex; align-items: baseline; gap: 7px; font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

@@ -20,7 +20,7 @@ export default function TodayStrip({ posts, users, me }) {
 
   return (
     <div className="card today-strip">
-      <div className="row">
+      <div className="crew-row">
         {users.map((u) => {
           const post = byUser.get(u.$id)
           return (

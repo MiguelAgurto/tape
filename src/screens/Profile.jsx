@@ -6,6 +6,7 @@ import { activityFor } from '../lib/activities'
 import { daysAgoISO, fmtDay } from '../lib/day'
 import MeasurementChart from '../components/MeasurementChart'
 import PhotoViewer from '../components/PhotoViewer'
+import PhotoCompare from '../components/PhotoCompare'
 import FeedItem from '../components/FeedItem'
 
 const STRIP_DAYS = 14
@@ -18,11 +19,17 @@ export default function Profile() {
   const [data, setData] = useState(null)
   const [failed, setFailed] = useState(false)
   const [viewing, setViewing] = useState(null)
+  // Selection mode for comparing. `picked` holds targetKeys, oldest pick first.
+  const [selecting, setSelecting] = useState(false)
+  const [picked, setPicked] = useState([])
+  const [comparing, setComparing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setData(null)
     setFailed(false)
+    setSelecting(false)
+    setPicked([])
     listProfile(userId)
       .then((res) => {
         if (!cancelled) setData(res)
@@ -73,12 +80,25 @@ export default function Profile() {
   const recentDays = new Set(checkins.filter((c) => c.date >= since).map((c) => c.date))
   const lastIn = checkins[0]?.date ?? null
 
+  // Two at a time. Picking a third drops the older selection rather than
+  // refusing the tap — being told "deselect one first" is a worse answer than
+  // just doing the obvious thing.
+  function togglePick(key) {
+    setPicked((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key].slice(-2),
+    )
+  }
+
+  const pickedPhotos = picked
+    .map((k) => photos.find((p) => p.targetKey === k))
+    .filter(Boolean)
+
   return (
     <div className="page" style={{ '--user': color }}>
       <BackLink />
 
       <header className="profile-head">
-        <span className="avatar avatar-lg">{(user.name || '?').charAt(0).toUpperCase()}</span>
+        <span className="avatar profile-avatar">{(user.name || '?').charAt(0).toUpperCase()}</span>
         <div>
           <h1 className="profile-name">{user.name}</h1>
           <p className="muted profile-sub">
@@ -93,9 +113,23 @@ export default function Profile() {
       <ConsistencyStrip checkins={checkins} />
 
       <section>
-        <p className="section-label">
-          Photos{photos.length > 0 && ` · ${photos.length}`}
-        </p>
+        <div className="section-head">
+          <p className="section-label">
+            Photos{photos.length > 0 && ` · ${photos.length}`}
+          </p>
+          {photos.length >= 2 && (
+            <button
+              type="button"
+              className="chip section-action"
+              onClick={() => {
+                setSelecting((on) => !on)
+                setPicked([])
+              }}
+            >
+              {selecting ? 'Cancel' : 'Compare'}
+            </button>
+          )}
+        </div>
         {photos.length === 0 ? (
           <div className="empty" style={{ padding: '28px 12px' }}>
             <span className="empty-emoji">📷</span>
@@ -108,18 +142,47 @@ export default function Profile() {
           </div>
         ) : (
           <div className="photo-grid">
-            {photos.map((p) => (
-              <button
-                key={p.targetKey}
-                type="button"
-                className="photo-cell"
-                aria-label={`Photo from ${fmtDay(p.date)}`}
-                onClick={() => setViewing(p)}
-              >
-                <img src={p.photoUrl} alt="" loading="lazy" />
-                <span className="photo-cell-date">{fmtDay(p.date)}</span>
-              </button>
-            ))}
+            {photos.map((p) => {
+              const at = picked.indexOf(p.targetKey)
+              return (
+                <button
+                  key={p.targetKey}
+                  type="button"
+                  className={`photo-cell${selecting ? ' selecting' : ''}${at > -1 ? ' picked' : ''}`}
+                  aria-label={
+                    selecting
+                      ? `${at > -1 ? 'Deselect' : 'Select'} photo from ${fmtDay(p.date)}`
+                      : `Photo from ${fmtDay(p.date)}`
+                  }
+                  aria-pressed={selecting ? at > -1 : undefined}
+                  onClick={() => (selecting ? togglePick(p.targetKey) : setViewing(p))}
+                >
+                  <img src={p.photoUrl} alt="" loading="lazy" />
+                  <span className="photo-cell-date">{fmtDay(p.date)}</span>
+                  {selecting && <span className="pick-badge">{at > -1 ? at + 1 : ''}</span>}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {selecting && (
+          <div className="compare-bar">
+            <span className="confirm-text">
+              {picked.length === 0
+                ? 'Pick two photos.'
+                : picked.length === 1
+                  ? 'Pick one more.'
+                  : 'Ready.'}
+            </span>
+            <button
+              type="button"
+              className="chip active"
+              disabled={picked.length !== 2}
+              onClick={() => setComparing(true)}
+            >
+              Compare
+            </button>
           </div>
         )}
       </section>
@@ -151,6 +214,14 @@ export default function Profile() {
           <div className="empty-title">Nothing logged yet</div>
           <p>{isMe ? 'Your first check-in starts the record.' : `${user.name} hasn't started.`}</p>
         </div>
+      )}
+
+      {comparing && pickedPhotos.length === 2 && (
+        <PhotoCompare
+          a={pickedPhotos[0]}
+          b={pickedPhotos[1]}
+          onClose={() => setComparing(false)}
+        />
       )}
 
       {viewing && (

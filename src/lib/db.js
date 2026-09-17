@@ -197,6 +197,9 @@ function normalizeCheckin(row, user) {
     createdAt: row.$createdAt,
     note: row.note ?? null,
     photoUrl: row.photoUrl ?? null,
+    // Only check-ins carry this; entries predate the column and can never
+    // clean up the file they uploaded.
+    photoId: row.photoId ?? null,
     payload: { activity: row.activity },
   }
 }
@@ -397,6 +400,24 @@ export async function deleteEntry(entryId) {
     tableId: ENTRIES_TABLE,
     rowId: entryId,
   })
+}
+
+// Delete a normalized feed post of either kind, and its photo with it.
+//
+// The row goes first: if the file delete fails afterwards we've leaked one
+// orphan in the bucket, which is invisible. Doing it the other way round would
+// leave a live post pointing at a photo that 404s, which is not.
+export async function deletePost(post) {
+  if (post.kind === 'checkin') await deleteCheckin(post.id)
+  else await deleteEntry(post.id)
+
+  if (post.photoId) {
+    try {
+      await storage.deleteFile({ bucketId: PHOTOS_BUCKET_ID, fileId: post.photoId })
+    } catch (err) {
+      console.error('Post deleted, but its photo could not be removed:', err)
+    }
+  }
 }
 
 // --- photos ----------------------------------------------------------------

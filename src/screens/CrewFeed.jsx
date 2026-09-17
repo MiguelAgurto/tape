@@ -45,6 +45,15 @@ export default function CrewFeed() {
     })
   }, [])
 
+  // Drop a post from the list once it's gone from the backend. The realtime
+  // delete event will arrive too, but it only raises the refresh pill, so the
+  // card has to come out here or it lingers until you tap it.
+  const removePost = useCallback((targetKey) => {
+    setFeed((prev) =>
+      prev ? { ...prev, posts: prev.posts.filter((p) => p.targetKey !== targetKey) } : prev,
+    )
+  }, [])
+
   useCrewRealtime(
     useCallback(({ table, action, row }) => {
       // Reactions and comments are self-contained: the payload carries its own
@@ -113,6 +122,7 @@ export default function CrewFeed() {
                 me={user}
                 usersById={usersById}
                 onPatch={(patch) => patchPost(p.targetKey, patch)}
+                onDelete={() => removePost(p.targetKey)}
               />
             ))
           )}

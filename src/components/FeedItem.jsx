@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { MEASUREMENTS, unitFor, labelFor } from '../lib/measurements'
 import { activityFor } from '../lib/activities'
 import { fmtDay } from '../lib/day'
+import { deletePost } from '../lib/db'
 import Icon from '../components/Icon'
 import ReactionBar from './ReactionBar'
 import CommentThread from './CommentThread'
@@ -9,11 +10,32 @@ import PhotoViewer from './PhotoViewer'
 
 // One card in the crew feed. The shell — author, date, photo, note, reactions,
 // replies — is identical for both kinds of post; only the body differs.
-export default function FeedItem({ post, me, usersById, onPatch }) {
+export default function FeedItem({ post, me, usersById, onPatch, onDelete }) {
   // The author can be null if a user row was deleted while their posts remain.
   const u = post.user || {}
   const color = u.color || 'var(--accent)'
   const [viewing, setViewing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  // Own-posts-only is a UI convention, not a permission — the table is open to
+  // anyone. It stops honest mistakes, which is all it is here for.
+  const mine = post.userId === me.id
+
+  async function remove() {
+    setDeleting(true)
+    setFailed(false)
+    try {
+      await deletePost(post)
+      onDelete?.()
+    } catch (err) {
+      console.error('Could not delete post:', err)
+      setDeleting(false)
+      setConfirming(false)
+      setFailed(true)
+    }
+  }
 
   return (
     <article className="feed-card" style={{ '--user': color }}>
@@ -21,6 +43,16 @@ export default function FeedItem({ post, me, usersById, onPatch }) {
         <span className="avatar">{(u.name || '?').charAt(0).toUpperCase()}</span>
         <span className="feed-name">{u.name || 'Someone'}</span>
         <time className="feed-date">{fmtDay(post.date)}</time>
+        {mine && !confirming && (
+          <button
+            type="button"
+            className="icon-btn feed-delete"
+            aria-label="Delete this post"
+            onClick={() => setConfirming(true)}
+          >
+            ×
+          </button>
+        )}
       </header>
 
       <div className="feed-body">
@@ -49,10 +81,38 @@ export default function FeedItem({ post, me, usersById, onPatch }) {
         />
       )}
 
-      <div className="social-bar">
-        <ReactionBar post={post} me={me} onPatch={onPatch} />
-        <CommentThread post={post} me={me} usersById={usersById} onPatch={onPatch} />
-      </div>
+      {failed && (
+        <p className="error" style={{ marginBottom: 0 }}>
+          Couldn't delete that. Try again.
+        </p>
+      )}
+
+      {/* The confirm replaces the social bar rather than sitting beside it, so
+          there is no way to tap a reaction while deciding. */}
+      {confirming ? (
+        <div className="confirm-bar">
+          <span className="confirm-text">
+            Delete this {post.kind === 'checkin' ? 'check-in' : 'entry'}?
+            {post.comments.length > 0 && ` ${post.comments.length} repl${post.comments.length === 1 ? 'y goes' : 'ies go'} with it.`}
+          </span>
+          <button
+            type="button"
+            className="chip"
+            disabled={deleting}
+            onClick={() => setConfirming(false)}
+          >
+            Cancel
+          </button>
+          <button type="button" className="chip danger" disabled={deleting} onClick={remove}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      ) : (
+        <div className="social-bar">
+          <ReactionBar post={post} me={me} onPatch={onPatch} />
+          <CommentThread post={post} me={me} usersById={usersById} onPatch={onPatch} />
+        </div>
+      )}
     </article>
   )
 }

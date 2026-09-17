@@ -646,6 +646,43 @@ button.chip .plus { color: var(--muted); font-weight: 600; }
 }
 .photo-close:hover { background: var(--surface-3); }
 
+/* ── Deleting your own post ──────────────────────────────────────────────── */
+
+/* Sits quietly next to the date until you want it. */
+.feed-delete {
+  margin-left: 10px;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+.feed-delete:hover { opacity: 1; }
+
+.confirm-bar {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.confirm-text {
+  flex: 1;
+  min-width: 140px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* The only red button in the app — it should feel different from everything
+ * else, because it is the one action you cannot undo. */
+button.chip.danger {
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+  color: var(--bad);
+}
+button.chip.danger:hover {
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  color: var(--bad);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

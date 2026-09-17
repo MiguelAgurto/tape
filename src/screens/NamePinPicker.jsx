@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { listUsers } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
+
+const PIN_LENGTH = 4
 
 export default function NamePinPicker() {
   const { login } = useAuth()
@@ -12,19 +14,17 @@ export default function NamePinPicker() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase
-      .from('users')
-      .select('id, name, color')
-      .order('name')
-      .then(({ data, error }) => {
-        if (error) setLoadError(true)
-        else setUsers(data ?? [])
+    listUsers()
+      .then(setUsers)
+      .catch((err) => {
+        console.error('Could not load the crew:', err)
+        setLoadError(true)
       })
   }, [])
 
-  // Attempt login once 4 digits are entered.
+  // Attempt login once the PIN is complete.
   useEffect(() => {
-    if (pin.length !== 4 || !selected) return
+    if (pin.length !== PIN_LENGTH || !selected) return
     let cancelled = false
     setChecking(true)
     setError('')
@@ -44,15 +44,15 @@ export default function NamePinPicker() {
   function press(d) {
     if (checking) return
     setError('')
-    setPin((p) => (p.length < 4 ? p + d : p))
+    setPin((p) => (p.length < PIN_LENGTH ? p + d : p))
   }
 
   if (loadError) {
     return (
       <div className="center-screen">
-        <h1>Tape</h1>
+        <Brand />
         <p className="error">
-          Couldn't load the crew. Check the Supabase config in <code>.env</code>.
+          Couldn't load the crew. Check the Appwrite config in <code>.env</code>.
         </p>
       </div>
     )
@@ -61,7 +61,28 @@ export default function NamePinPicker() {
   if (!users) {
     return (
       <div className="center-screen">
-        <p className="muted">Loading…</p>
+        <Brand />
+        <div className="skeleton" style={{ height: 54 }} />
+        <div className="skeleton" style={{ height: 54 }} />
+      </div>
+    )
+  }
+
+  // No crew seeded yet — the app is wired up but the users table is empty.
+  if (users.length === 0) {
+    return (
+      <div className="center-screen">
+        <Brand />
+        <div className="card">
+          <div className="empty" style={{ padding: 0 }}>
+            <span className="empty-emoji">👥</span>
+            <div className="empty-title">No crew yet</div>
+            <p style={{ marginBottom: 14 }}>Seed the roster with:</p>
+            <code style={{ fontSize: 12, wordBreak: 'break-all', color: 'var(--accent)' }}>
+              node scripts/seed-users.mjs "Name:#c9f24d:1234"
+            </code>
+          </div>
+        </div>
       </div>
     )
   }
@@ -70,18 +91,15 @@ export default function NamePinPicker() {
   if (!selected) {
     return (
       <div className="center-screen">
-        <h1>Tape</h1>
-        <p className="muted">Who's this?</p>
+        <Brand />
         <div style={{ display: 'grid', gap: 10 }}>
           {users.map((u) => (
-            <button
-              key={u.id}
-              className="ghost"
-              style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-start' }}
-              onClick={() => setSelected(u)}
-            >
-              <span className="dot" style={{ background: u.color }} />
-              {u.name}
+            <button key={u.$id} className="ghost person" onClick={() => setSelected(u)}>
+              <span className="avatar" style={{ '--user': u.color }}>
+                {u.name.charAt(0).toUpperCase()}
+              </span>
+              <span className="person-name">{u.name}</span>
+              <span className="person-go">→</span>
             </button>
           ))}
         </div>
@@ -93,28 +111,56 @@ export default function NamePinPicker() {
   return (
     <div className="center-screen">
       <button
-        className="ghost"
-        style={{ alignSelf: 'flex-start', width: 'auto', padding: '8px 12px' }}
+        className="chip"
+        style={{ alignSelf: 'flex-start' }}
         onClick={() => {
           setSelected(null)
           setPin('')
           setError('')
         }}
       >
-        ← {selected.name}
+        ← Back
       </button>
-      <p className="muted" style={{ textAlign: 'center' }}>Enter your PIN</p>
-      <div className="pin-display">{'•'.repeat(pin.length).padEnd(4, '·')}</div>
-      {error && <p className="error" style={{ textAlign: 'center' }}>{error}</p>}
+
+      <div style={{ textAlign: 'center' }}>
+        <span className="avatar avatar-lg" style={{ '--user': selected.color }}>
+          {selected.name.charAt(0).toUpperCase()}
+        </span>
+        <div className="person-name" style={{ marginTop: 14 }}>{selected.name}</div>
+        <p className="muted" style={{ fontSize: 14, margin: '4px 0 0' }}>
+          {checking ? 'Checking…' : error ? error : `Enter your ${PIN_LENGTH}-digit PIN`}
+        </p>
+      </div>
+
+      <div className={`pin-display ${error ? 'shake' : ''}`}>
+        {Array.from({ length: PIN_LENGTH }, (_, i) => (
+          <span key={i} className={`pin-dot ${error ? 'bad' : i < pin.length ? 'filled' : ''}`} />
+        ))}
+      </div>
+
       <div className="keypad">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-          <button key={d} onClick={() => press(String(d))}>{d}</button>
+          <button key={d} onClick={() => press(String(d))}>
+            {d}
+          </button>
         ))}
-        <span />
+        <button className="blank" tabIndex={-1} aria-hidden="true" />
         <button onClick={() => press('0')}>0</button>
-        <button className="ghost" onClick={() => setPin((p) => p.slice(0, -1))}>⌫</button>
+        <button className="ghost" aria-label="Delete" onClick={() => setPin((p) => p.slice(0, -1))}>
+          ⌫
+        </button>
       </div>
-      {checking && <p className="muted" style={{ textAlign: 'center' }}>Checking…</p>}
+    </div>
+  )
+}
+
+function Brand() {
+  return (
+    <div className="brand">
+      <h1 className="brand-name">
+        tape<span className="dot-accent">.</span>
+      </h1>
+      <p className="brand-tag">Measure. Log. Compare.</p>
     </div>
   )
 }

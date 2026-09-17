@@ -27,17 +27,18 @@ export default function App() {
 function BottomNav() {
   return (
     <nav className="nav">
+      {/* Emoji earn their place here — they're the nav's only ornament. */}
       <NavLink to="/" end>
         <span className="ico">📣</span>
         Crew
       </NavLink>
       <NavLink to="/log">
-        <span className="ico">➕</span>
+        <span className="ico">✍️</span>
         Log
       </NavLink>
       <NavLink to="/tape">
         <span className="ico">📈</span>
-        The Tape
+        Tape
       </NavLink>
     </nav>
   )

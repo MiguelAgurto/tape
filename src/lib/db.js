@@ -278,24 +278,30 @@ export async function listFeed(limit = FEED_PER_KIND * 2) {
     .sort(newestFirst)
     .slice(0, limit)
 
-  const { reactionsByKey, commentsByKey } = await loadSocial(posts.map((p) => p.targetKey))
+  // Social rows are a second round trip and the cards do not need them to
+  // draw. Callers can render this, then await the returned `social` promise
+  // and patch the counts in.
+  const social = attachSocial(posts)
+  // A caller is free to ignore `social`; make sure that never surfaces as an
+  // unhandled rejection.
+  social.catch(() => {})
 
   return {
     users,
-    posts: posts.map((p) => ({
-      ...p,
-      reactions: reactionsByKey.get(p.targetKey) ?? [],
-      comments: commentsByKey.get(p.targetKey) ?? [],
-    })),
+    posts: posts.map((p) => ({ ...p, reactions: [], comments: [] })),
+    social,
   }
 }
 
-// Everything one person's profile needs, in one call.
+// Everything one person's profile needs that can be fetched in a single wave.
 //
-// Both queries ride the idx_user_date indexes, so this stays cheap as the
-// history grows. Social rows are only fetched for the handful of posts the
-// profile actually renders as cards — the photo grid and the consistency strip
-// need no reactions at all.
+// Deliberately does NOT wait for reactions and comments: those need the post
+// ids, so they are a second round trip, and they feed only the recent cards at
+// the bottom of the page. The header, consistency strip, photo grid and chart
+// all have what they need here — blocking them on ~400ms of latency they do
+// not use is the difference between a page that appears and a page that lags.
+//
+// Both queries ride the idx_user_date indexes added with the schema.
 export async function listProfile(userId, recentLimit = 6) {
   const [entries, checkins, users] = await Promise.all([
     listAll(ENTRIES_TABLE, [
@@ -317,9 +323,6 @@ export async function listProfile(userId, recentLimit = 6) {
     ...checkins.map((r) => normalizeCheckin(r, user)),
   ].sort(newestFirst)
 
-  const recent = posts.slice(0, recentLimit)
-  const { reactionsByKey, commentsByKey } = await loadSocial(recent.map((p) => p.targetKey))
-
   return {
     user,
     users,
@@ -327,12 +330,20 @@ export async function listProfile(userId, recentLimit = 6) {
     entries,
     checkins,
     photos: posts.filter((p) => p.photoUrl),
-    recent: recent.map((p) => ({
-      ...p,
-      reactions: reactionsByKey.get(p.targetKey) ?? [],
-      comments: commentsByKey.get(p.targetKey) ?? [],
-    })),
+    // Empty arrays, not undefined: the cards render immediately with a blank
+    // reaction bar, which is fixed-height, so filling it in shifts nothing.
+    recent: posts.slice(0, recentLimit).map((p) => ({ ...p, reactions: [], comments: [] })),
   }
+}
+
+// The second wave. Hand it the posts you are actually rendering as cards.
+export async function attachSocial(posts) {
+  const { reactionsByKey, commentsByKey } = await loadSocial(posts.map((p) => p.targetKey))
+  return posts.map((p) => ({
+    ...p,
+    reactions: reactionsByKey.get(p.targetKey) ?? [],
+    comments: commentsByKey.get(p.targetKey) ?? [],
+  }))
 }
 
 // --- reactions -------------------------------------------------------------

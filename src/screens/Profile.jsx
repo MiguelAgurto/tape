@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { listProfile } from '../lib/db'
+import { listProfile, attachSocial } from '../lib/db'
 import { useAuth } from '../context/AuthContext'
 import { activityFor } from '../lib/activities'
 import { daysAgoISO, fmtDay } from '../lib/day'
-import MeasurementChart from '../components/MeasurementChart'
+// recharts is ~2/3 of the bundle and only a profile draws a chart, so it is
+// split out and fetched while the rest of the page is already on screen.
+const MeasurementChart = lazy(() => import('../components/MeasurementChart'))
 import PhotoViewer from '../components/PhotoViewer'
 import PhotoCompare from '../components/PhotoCompare'
 import FeedItem from '../components/FeedItem'
@@ -39,7 +41,14 @@ export default function Profile() {
     setPicked([])
     listProfile(userId)
       .then((res) => {
-        if (!cancelled) setData(res)
+        if (cancelled) return null
+        // Paint everything above the recent cards now; the reactions and
+        // replies arrive a round trip later and patch themselves in.
+        setData(res)
+        return attachSocial(res.recent)
+      })
+      .then((recent) => {
+        if (!cancelled && recent) setData((d) => (d ? { ...d, recent } : d))
       })
       .catch((err) => {
         console.error('Could not load that profile:', err)
@@ -196,7 +205,9 @@ export default function Profile() {
 
       <section style={{ marginTop: 26 }}>
         <p className="section-label">{isMe ? 'The tape' : 'Measurements'}</p>
-        <MeasurementChart entries={entries} color={color} compact />
+        <Suspense fallback={<div className="skeleton sk-card" style={{ height: 240 }} />}>
+          <MeasurementChart entries={entries} color={color} compact />
+        </Suspense>
       </section>
 
       {recent.length > 0 && (

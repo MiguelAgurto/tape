@@ -14,9 +14,29 @@ export default function CrewFeed() {
   const load = useCallback(() => {
     return listFeed()
       .then((res) => {
-        setFeed(res)
+        // Cards first. The reaction bar is fixed-height and renders its counts
+        // only when non-zero, so filling them in a moment later shifts nothing.
+        setFeed({ users: res.users, posts: res.posts })
         setFailed(false)
         setHasNew(false)
+        return res.social
+      })
+      .then((posts) => {
+        if (!posts) return
+        const byKey = new Map(posts.map((p) => [p.targetKey, p]))
+        setFeed((prev) =>
+          prev
+            ? {
+                ...prev,
+                posts: prev.posts.map((p) => {
+                  const withSocial = byKey.get(p.targetKey)
+                  return withSocial
+                    ? { ...p, reactions: withSocial.reactions, comments: withSocial.comments }
+                    : p
+                }),
+              }
+            : prev,
+        )
       })
       .catch((err) => {
         console.error('Could not load the feed:', err)

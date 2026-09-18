@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listFeed } from '../lib/db'
+import { readCache, writeCache } from '../lib/cache'
 import { useAuth } from '../context/AuthContext'
 import { useCrewRealtime } from '../lib/realtime'
 import FeedItem from '../components/FeedItem'
 import TodayStrip from '../components/TodayStrip'
 
+const CACHE_KEY = 'feed'
+
 export default function CrewFeed() {
   const { user } = useAuth()
-  const [feed, setFeed] = useState(null)
+  // Last visit's feed, painted before a single request goes out. null means
+  // there is nothing cached, which is the only case that shows a skeleton.
+  const [feed, setFeed] = useState(() => readCache(CACHE_KEY))
   const [failed, setFailed] = useState(false)
   const [hasNew, setHasNew] = useState(false)
 
@@ -24,24 +29,29 @@ export default function CrewFeed() {
       .then((posts) => {
         if (!posts) return
         const byKey = new Map(posts.map((p) => [p.targetKey, p]))
-        setFeed((prev) =>
-          prev
-            ? {
-                ...prev,
-                posts: prev.posts.map((p) => {
-                  const withSocial = byKey.get(p.targetKey)
-                  return withSocial
-                    ? { ...p, reactions: withSocial.reactions, comments: withSocial.comments }
-                    : p
-                }),
-              }
-            : prev,
-        )
+        setFeed((prev) => {
+          if (!prev) return prev
+          const next = {
+            ...prev,
+            posts: prev.posts.map((p) => {
+              const withSocial = byKey.get(p.targetKey)
+              return withSocial
+                ? { ...p, reactions: withSocial.reactions, comments: withSocial.comments }
+                : p
+            }),
+          }
+          // Cache only once both waves are in, so a return visit never paints
+          // a feed with every reaction count missing.
+          writeCache(CACHE_KEY, next)
+          return next
+        })
       })
       .catch((err) => {
         console.error('Could not load the feed:', err)
-        setFailed(true)
-        setFeed({ posts: [], users: [] })
+        // A cached feed beats an error screen: it is what you last saw, and
+        // the pill or the next visit will correct it.
+        setFeed((prev) => prev ?? { posts: [], users: [] })
+        setFailed((prevFailed) => prevFailed || !readCache(CACHE_KEY))
       })
   }, [])
 

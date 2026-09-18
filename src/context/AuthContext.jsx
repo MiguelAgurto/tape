@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { getUser } from '../lib/db'
 import { verifyPin } from '../lib/pin'
 import { loadSession, saveSession, clearSession } from '../lib/session'
+import { clearCache } from '../lib/cache'
 
 const AuthContext = createContext(null)
 
@@ -37,6 +38,9 @@ export function AuthProvider({ children }) {
 
   function logout() {
     clearSession()
+    // Otherwise the next person on this device sees the last one's feed flash
+    // up before their own loads.
+    clearCache()
     setUser(null)
   }
 

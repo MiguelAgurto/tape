@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { listProfile, attachSocial } from '../lib/db'
+import { readCache, writeCache } from '../lib/cache'
 import { useAuth } from '../context/AuthContext'
 import { activityFor } from '../lib/activities'
 import { daysAgoISO, fmtDay } from '../lib/day'
@@ -35,7 +36,9 @@ export default function Profile() {
 
   useEffect(() => {
     let cancelled = false
-    setData(null)
+    const cacheKey = `profile.${userId}`
+    // Paint last time's profile straight away; the fetch below replaces it.
+    setData(readCache(cacheKey))
     setFailed(false)
     setSelecting(false)
     setPicked([])
@@ -48,11 +51,20 @@ export default function Profile() {
         return attachSocial(res.recent)
       })
       .then((recent) => {
-        if (!cancelled && recent) setData((d) => (d ? { ...d, recent } : d))
+        if (cancelled || !recent) return
+        setData((d) => {
+          if (!d) return d
+          const next = { ...d, recent }
+          // Cache only once the social wave is in, so a return visit never
+          // paints cards with their reactions missing.
+          writeCache(cacheKey, next)
+          return next
+        })
       })
       .catch((err) => {
         console.error('Could not load that profile:', err)
-        if (!cancelled) setFailed(true)
+        // Only surface the failure if there is nothing cached to show.
+        if (!cancelled && !readCache(cacheKey)) setFailed(true)
       })
     return () => {
       cancelled = true

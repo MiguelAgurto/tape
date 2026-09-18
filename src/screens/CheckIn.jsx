@@ -9,7 +9,7 @@ import { todayISO } from '../lib/day'
 // optional, because a flow that takes thirty seconds is a flow nobody does on
 // a Tuesday night.
 export default function CheckIn() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const fileRef = useRef(null)
   const date = todayISO()
 
@@ -104,18 +104,7 @@ export default function CheckIn() {
 
   return (
     <div className="page">
-      <h1 className="page-title">
-        Today
-        <button className="chip" onClick={logout} style={{ marginLeft: 'auto', fontSize: 13 }}>
-          <span
-            className="avatar"
-            style={{ '--user': user.color, width: 20, height: 20, fontSize: 10 }}
-          >
-            {user.name.charAt(0).toUpperCase()}
-          </span>
-          {user.name}
-        </button>
-      </h1>
+      <h1 className="page-title">Today</h1>
 
       {already && already.length > 0 && (
         <div className="card">

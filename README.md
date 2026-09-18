@@ -129,15 +129,21 @@ blocked. The resulting file URL is saved to the entry's `photoUrl`.
 
 ## Screens
 
-- **Crew** — the today strip (who's in, who's the gap) above a merged feed of
+- **Crew** — the crew row (who's in today, who's the gap) above a merged feed of
   check-ins and measurements, newest first. Every post takes reactions and
-  replies. Updates live.
+  replies. Updates live. Tapping any avatar opens that person's profile.
 - **Today** — the daily check-in: tap an activity, optionally add a note and a
   photo. One tap is a complete check-in.
 - **Log** — date (defaults to today), optional measurements (numeric keyboard on
   mobile), one photo, a note. After saving, shows the delta vs. your last entry.
-- **The Tape** — a per-measurement line chart of your own history, switchable.
-  Measurements only; check-ins never enter it.
+- **You** — your own profile. The same screen as anyone else's (`/me` and
+  `/crew/:userId` both render `Profile`), plus an account section that only
+  renders for yourself.
+
+A profile carries a 14-day consistency strip, a photo grid where any two shots
+can be selected and compared side by side with the measurement change between
+them, the measurement chart, and recent posts. The chart is measurements only;
+check-ins never enter it.
 
 Still out of scope: streaks, badges, goal lines, push notifications,
 leaderboards, body-diagram input, unit conversion (kg/cm are hardcoded).

@@ -14,7 +14,7 @@ import Icon from '../components/Icon'
 import { todayISO } from '../lib/day'
 
 export default function LogEntry() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const fileRef = useRef(null)
 
   const [date, setDate] = useState(todayISO())
@@ -121,19 +121,7 @@ export default function LogEntry() {
 
   return (
     <div className="page">
-      <h1 className="page-title">
-        Log
-        <button
-          className="chip"
-          onClick={logout}
-          style={{ marginLeft: 'auto', fontSize: 13 }}
-        >
-          <span className="avatar" style={{ '--user': user.color, width: 20, height: 20, fontSize: 10 }}>
-            {user.name.charAt(0).toUpperCase()}
-          </span>
-          {user.name}
-        </button>
-      </h1>
+      <h1 className="page-title">Log</h1>
 
       <form onSubmit={handleSubmit}>
         {/* Card one: what you measured. */}

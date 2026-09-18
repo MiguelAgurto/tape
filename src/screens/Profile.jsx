@@ -11,10 +11,17 @@ import FeedItem from '../components/FeedItem'
 
 const STRIP_DAYS = 14
 
+// Serves two routes: /crew/:userId for a brother, and /me for yourself. The
+// only differences are the way back (a tab needs none) and the account section
+// at the bottom, which is the one thing a profile of someone else must not show.
 export default function Profile() {
-  const { userId } = useParams()
-  const { user: me } = useAuth()
+  const { userId: param } = useParams()
+  const { user: me, logout } = useAuth()
   const navigate = useNavigate()
+
+  // No param means /me — the tab.
+  const userId = param ?? me.id
+  const asTab = !param
 
   const [data, setData] = useState(null)
   const [failed, setFailed] = useState(false)
@@ -51,7 +58,7 @@ export default function Profile() {
   if (failed || (data && !data.user)) {
     return (
       <div className="page">
-        <BackLink />
+        {!asTab && <BackLink />}
         <div className="empty">
           <span className="empty-emoji">🤷</span>
           <div className="empty-title">No one here</div>
@@ -64,7 +71,7 @@ export default function Profile() {
   if (!data) {
     return (
       <div className="page">
-        <BackLink />
+        {!asTab && <BackLink />}
         <div className="skeleton sk-card" style={{ height: 120 }} />
         <div className="skeleton sk-card" style={{ height: 200 }} />
       </div>
@@ -95,7 +102,7 @@ export default function Profile() {
 
   return (
     <div className="page" style={{ '--user': color }}>
-      <BackLink />
+      {!asTab && <BackLink />}
 
       <header className="profile-head">
         <span className="avatar profile-avatar">{(user.name || '?').charAt(0).toUpperCase()}</span>
@@ -188,7 +195,7 @@ export default function Profile() {
       </section>
 
       <section style={{ marginTop: 26 }}>
-        <p className="section-label">Measurements</p>
+        <p className="section-label">{isMe ? 'The tape' : 'Measurements'}</p>
         <MeasurementChart entries={entries} color={color} compact />
       </section>
 
@@ -214,6 +221,22 @@ export default function Profile() {
           <div className="empty-title">Nothing logged yet</div>
           <p>{isMe ? 'Your first check-in starts the record.' : `${user.name} hasn't started.`}</p>
         </div>
+      )}
+
+      {isMe && (
+        <section style={{ marginTop: 26 }}>
+          <p className="section-label">Account</p>
+          <div className="card">
+            <div className="account-row">
+              <span>
+                Signed in as <strong>{user.name}</strong>
+              </span>
+              <button type="button" className="chip" onClick={logout}>
+                Sign out
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {comparing && pickedPhotos.length === 2 && (

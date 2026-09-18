@@ -2,7 +2,6 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import NamePinPicker from './screens/NamePinPicker'
 import LogEntry from './screens/LogEntry'
-import Tape from './screens/Tape'
 import CrewFeed from './screens/CrewFeed'
 import CheckIn from './screens/CheckIn'
 import Profile from './screens/Profile'
@@ -19,20 +18,23 @@ export default function App() {
         <Route path="/" element={<CrewFeed />} />
         <Route path="/today" element={<CheckIn />} />
         <Route path="/log" element={<LogEntry />} />
-        <Route path="/tape" element={<Tape />} />
-        {/* The app's only parameterised route — reached by tapping any avatar. */}
+        {/* Your own profile, and anyone else's. Same screen. */}
+        <Route path="/me" element={<Profile />} />
         <Route path="/crew/:userId" element={<Profile />} />
+        {/* The tape tab became /me; keep old links and cached clients working. */}
+        <Route path="/tape" element={<Navigate to="/me" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <BottomNav />
+      <BottomNav user={user} />
     </div>
   )
 }
 
-function BottomNav() {
+function BottomNav({ user }) {
   return (
     <nav className="nav">
-      {/* Emoji earn their place here — they're the nav's only ornament. */}
+      {/* Emoji are the nav's only ornament — except the last tab, which is
+          your own avatar. */}
       <NavLink to="/" end>
         <span className="ico">📣</span>
         Crew
@@ -45,9 +47,15 @@ function BottomNav() {
         <span className="ico">✍️</span>
         Log
       </NavLink>
-      <NavLink to="/tape">
-        <span className="ico">📈</span>
-        Tape
+      {/* Your own face rather than an emoji — same visual language as the
+          crew row, and it makes the tab unmistakably "you". */}
+      <NavLink to="/me">
+        <span className="ico">
+          <span className="avatar nav-avatar" style={{ '--user': user.color }}>
+            {user.name.charAt(0).toUpperCase()}
+          </span>
+        </span>
+        You
       </NavLink>
     </nav>
   )

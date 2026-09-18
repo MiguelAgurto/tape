@@ -933,6 +933,30 @@ button.chip.section-action { padding: 6px 12px; font-size: 13px; }
 }
 .compare-delta { display: flex; align-items: baseline; gap: 7px; font-size: 13px; }
 
+/* ── Your own tab ────────────────────────────────────────────────────────── */
+
+/* The nav icon is your avatar rather than an emoji, so the tab reads as "you"
+ * the same way the crew row reads as "them". Sized to sit on the emoji's
+ * baseline so the four tabs stay level. */
+.nav-avatar {
+  width: 21px;
+  height: 21px;
+  font-size: 11px;
+  margin: 1px auto 0;
+  display: flex;
+}
+.nav a:not(.active) .nav-avatar { opacity: 0.55; }
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--text-2);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
